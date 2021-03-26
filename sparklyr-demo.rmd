@@ -52,7 +52,9 @@ spark_covid <- spark_read_csv(
 head(spark_covid)
 glimpse(spark_covid)
 
-spark_covid_latest <- spark_covid %>% filter(date == "2020-08-08") 
+spark_covid_latest <- spark_covid %>% filter(date == "2021-03-19") 
+
+tmp <- as_tibble(spark_covid_latest)
 ```
 
 ### create data partition
