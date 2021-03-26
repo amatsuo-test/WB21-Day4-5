@@ -111,15 +111,56 @@ model.matrix(fm_socdem, data = data_train_preped) %>% head()
 Run a few models, and evaluate them. Which one has the better predictive performance?
 
 ```{r}
+mod <- glm(fm_socdem, data = data_train_preped, family = "binomial")
+test_pred <- (predict(mod, newdata = data_test_preped) > .5) %>% 
+  as.numeric() %>% factor()
+confusionMatrix(test_pred, data_test_preped$LeaveVote, 
+                positive = "1", mode = "prec_recall")
 
 ```
+```{r}
+print_test_confusion_matrix <- function(fm) {
+  mod <- glm(fm, data = data_train_preped, family = "binomial")
+  test_pred <- (predict(mod, newdata = data_test_preped) > .5) %>% 
+    as.numeric() %>% factor()
+  confusionMatrix(test_pred, data_test_preped$LeaveVote, 
+                  positive = "1", mode = "prec_recall")
+}
 
+print_test_confusion_matrix(fm_socdem)
+print_test_confusion_matrix(fm_identity)
+    
+print_test_confusion_matrix(fm_antielite)
+print_test_confusion_matrix(fm_attitudes)
+print_test_confusion_matrix(fm_all)
+```
 ## Linear SVM
 
 - Train a linear SVM model, check the predictive performance. How does it compare to the logistic regression?
 
 ```{r}
+model_svm <- train(fm_identity, data = data_train_preped, method = "svmLinear")
+print(model_svm)
 
+test_pred <- predict(model_svm, newdata = data_test_preped) 
+confusionMatrix(test_pred, data_test_preped$LeaveVote, 
+                positive = "1", mode = "prec_recall")
+
+
+train_model <- function(fm, method = "svmLinear") {
+  model <- train(fm, data = data_train_preped, method = method)
+  return(model)
+}
+
+formulae <- list(fm_socdem, fm_identity, fm_antielite, fm_attitudes)
+
+models <- formulae %>% map(train_model)
+models %>% map(print)
+```
+```{r}
+models %>% 
+  map(~predict(., newdata = data_test_preped)) %>%
+  map(~confusionMatrix(., data_test_preped$LeaveVote, positive = "1", mode = "prec_recall"))
 ```
 
 
@@ -128,6 +169,24 @@ Run a few models, and evaluate them. Which one has the better predictive perform
 - Train non-linear SVM. How is the performance? Any improvement?
 
 ```{r cache=T}
+
+model_svm_poly <- train(fm_identity, data = data_train_preped, method = "svmPoly")
+
+model_svm_poly
+pred_test_svm_poly <- predict(model_svm_poly, newdata = data_test_preped)
+confusionMatrix(pred_test_svm_poly, data_test_preped$LeaveVote, positive = "1", mode = "prec_recall")
+
+models_svmradial <- formulae %>% map(~train_model(., method = "svmRadial"))
+models_svmradial %>% map(print)
+
+models_svmradial %>% 
+  map(~predict(., newdata = data_train_preped)) %>%
+  map(~confusionMatrix(., data_train_preped$LeaveVote, positive = "1", mode = "prec_recall"))
+
+models_svmradial %>% 
+  map(~predict(., newdata = data_train_preped)) %>%
+  map(~confusionMatrix(., data_train_preped$LeaveVote)$byClass %>% data.frame()) %>%
+  bind_cols()
 
 
 ```
@@ -140,7 +199,32 @@ Run a few models, and evaluate them. Which one has the better predictive perform
   - Which inupts survived?
 
 ```{r}
+library(glmnet)
+train_y <- data_train_preped$LeaveVote
+
+#train_x <- data_train_preped %>% select(-LeaveVote) %>% as.matrix()
+train_x <- model.matrix(fm_all, data = data_train_preped)[, -1]
+
+
+model_lasso_cv <- cv.glmnet(train_x, train_y,
+                             data = data_train_preped,
+                             alpha = 1,
+                             family = "binomial")
+plot(model_lasso_cv)
 
 ```
 
+```{r}
+plot(model_lasso_cv$glmnet.fit, xvar = "lambda", label = T)
+colnames(train_x)
 
+coef(model_lasso_cv)
+```
+```{r}
+test_x <- model.matrix(fm_all, data = data_test_preped)[, -1]
+pred_test_lasso <- (predict(model_lasso_cv, newx = test_x) > .5) %>%
+  as.numeric() %>% factor()
+
+confusionMatrix(pred_test_lasso, data_test_preped$LeaveVote, 
+                positive = "1", mode = "prec_recall")
+```

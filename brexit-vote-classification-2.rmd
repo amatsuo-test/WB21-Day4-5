@@ -100,17 +100,41 @@ fm_all <- formula("LeaveVote ~ .")
 - Evaluate the model
 - What do you find?
 
-```{r eval = F}
+```{r}
 
+mod_tree <- tree(fm_all, data=data_train_preped)
+plot(mod_tree)
+text(mod_tree)
+pred_test_tree <- predict(mod_tree, newdata = data_test_preped, type = 'class') 
+confusionMatrix(pred_test_tree, data_test_preped$LeaveVote, positive = "1", 
+                mode = "prec_recall")
 ```
 
-## Randowm forest regression and adaBoost
+## Random forest regression and adaBoost
 
 - Now, run "forest" models
 - Any improvement of the prediction?
 - For random forest training, use `tuneGrid = data.frame(mtry = c(2:4))`. Otherwise it's too slow...
 
 ```{r cache=T}
+mod_rf <- train(fm_attitudes,
+                data = data_train_preped, 
+                method = "rf", 
+                tuneGrid = data.frame(mtry = c(2:4)))
+mod_rf
+
+pred_test_rf <- predict(mod_rf, newdata = data_test_preped)
+confusionMatrix(pred_test_rf, data_test_preped$LeaveVote, positive = "1", 
+                mode = "prec_recall")
+
+
+mod_ada <- train(fm_attitudes,
+                data = data_train_preped, 
+                method = "ada")
+mod_ada
+
+pred_test_ada <- predict(mod_ada, newdata = data_test_preped)
+confusionMatrix(pred_test_ada, data_test_preped$LeaveVote, positive = "1", 
+                mode = "prec_recall")
 
 ```
-
