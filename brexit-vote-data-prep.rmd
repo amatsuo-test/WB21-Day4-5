@@ -1,0 +1,36 @@
+---
+title: "Predicting the brexit vote"
+author: ""
+date: "25/03/2021"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)
+library(caret)
+library(glmnet)
+```
+
+## Load data
+
+We sub-sample the data. Full data takes too much time to estimate for the class... (Feel free to run full sample after the class)
+
+```{r}
+data_brexit <- read_csv("data/data_bes.csv.gz") 
+
+set.seed(42)
+labeled_idx <- createDataPartition(data_brexit$LeaveVote, times = 1, list = F, p = .2)
+
+data_brexit %>% slice(labeled_idx) %>%
+  write_csv("data/data_bes_labeled.csv.gz")
+data_brexit %>% slice(-labeled_idx) %>% 
+  select(-LeaveVote) %>%
+  write_csv("data/data_bes_unlabeled.csv.gz")
+
+```
